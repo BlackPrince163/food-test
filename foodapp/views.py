@@ -1,24 +1,18 @@
 from django.db.models import Prefetch
-from django.shortcuts import render
 from rest_framework import viewsets
-from rest_framework.response import Response
 
 from foodapp.models import FoodCategory, Food
 from foodapp.serializers import FoodListSerializer
 
 
-class FoodCategoryView(viewsets.ViewSet):
+class FoodCategoryViewSet(viewsets.ModelViewSet):
+    queryset = FoodCategory.objects.filter(food__is_publish=True)
     serializer_class = FoodListSerializer
 
-    def list(self, request):
-        queryset = (
-            FoodCategory
-            .objects
-            .prefetch_related(
-                Prefetch(
-                    'food',
-                    queryset=Food.objects.prefetch_related('additional').filter(is_publish=True).order_by("internal_code")))
-            .order_by('id'))
+    def get_queryset(self):
+        queryset = FoodCategory.objects.filter(food__is_publish=True).prefetch_related(
+            Prefetch("food", queryset=Food.objects.filter(is_publish=True))
+        ).distinct()
+        return queryset
 
-        serializer = FoodListSerializer(queryset, many=True)
-        return Response(serializer.data)
+
